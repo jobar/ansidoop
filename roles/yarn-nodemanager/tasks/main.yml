@@ -1,0 +1,21 @@
+# yarn-nodemanager/tasks/main.yml
+---
+
+- name: Install Hadoop packages (YARN NodeManager)
+  tags:
+    - hadoop
+    - yarn
+    - nodemanager
+  package:
+    name: ["hadoop-mapreduce", "hadoop-yarn", "hadoop-yarn-nodemanager"]
+    state: present
+
+- name: Restart YARN NodeManager service
+  tags:
+    - hadoop
+    - yarn
+    - nodemanager
+  service:
+    name="hadoop-yarn-nodemanager"
+    state=restarted
+    enabled=yes

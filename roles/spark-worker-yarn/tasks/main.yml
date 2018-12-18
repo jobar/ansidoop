@@ -1,0 +1,36 @@
+# spark-worker-yarn/tasks/main.yml
+---
+
+- name: Make Spark-Yarn-Shuffle-Service pluggin available for hadoop
+  file:
+    path="{{ YARN_HOME_DIR }}/lib/{{ SPARK_SUFFLE_JAR }}"
+    src="{{ SPARK_HOME_DIR }}/yarn/{{ SPARK_SUFFLE_JAR }}"
+    state=link
+
+- name: Update yarn-site.xml adding spark-shuffle to aux-services
+  lineinfile:
+    path: "{{ HADOOP_CONF_DIR }}/yarn-site.xml"
+    regexp: "^ *<value>mapreduce_shuffle</value> *$"
+    line: "    <value>mapreduce_shuffle,spark_shuffle</value>"
+    state: present
+
+- name: Update yarn-site.xml adding spark-shuffle conf
+  blockinfile:
+    path: "{{ HADOOP_CONF_DIR }}/yarn-site.xml"
+    state: present
+    insertbefore: "</configuration>"
+    content: |
+      <property>
+        <name>yarn.nodemanager.aux-services.spark_shuffle.class</name>
+        <value>org.apache.spark.network.yarn.YarnShuffleService</value>
+      </property>
+
+- name: Restart YARN NodeManager service
+  tags:
+    - hadoop
+    - yarn
+    - nodemanager
+  service:
+    name="hadoop-yarn-nodemanager"
+    state=restarted
+    enabled=yes

@@ -1,0 +1,23 @@
+# bigtop/tasks/main.yml
+---
+- name: add signing key for Apache Bigtop repository
+  apt_key:
+    url: "{{ BIGTOP_MIRROR }}/bigtop/bigtop-{{ BIGTOP_RELEASE }}/repos/GPG-KEY-bigtop"
+    state: present
+
+
+- name: add Apache Bigtop repository
+  get_url:
+    url: "{{ BIGTOP_MIRROR }}/bigtop/bigtop-{{ BIGTOP_RELEASE }}/repos/{{ ansible_distribution | lower }}{{ ansible_distribution_version }}/bigtop.list"
+    dest: "/etc/apt/sources.list.d/bigtop.list"
+  register: _bigtop_add_apt_repo
+
+
+# this is run as task and not as a handler, since handlers are all
+# executed after *all* tasks in the play have run, and we need the
+# package cache to be up-to-date immediately for subsequent install
+# tasks to succeed...
+- name: update APT cache
+  apt:
+    update_cache: yes
+  when: "_bigtop_add_apt_repo is changed"

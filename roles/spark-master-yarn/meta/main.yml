@@ -1,0 +1,5 @@
+# spark-worker-yarn/meta/main.yml
+---
+
+dependencies:
+  - { role: spark-common }

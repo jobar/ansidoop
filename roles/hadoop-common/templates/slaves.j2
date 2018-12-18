@@ -1,0 +1,10 @@
+# THIS FILE IS CONTROLLED BY ANSIBLE
+#
+
+#
+# All hosts below will run the HDFS DataNode and YARN NodeManager
+# services.
+#
+{% for fqdn in groups.followers %}
+{{fqdn}}
+{% endfor %}

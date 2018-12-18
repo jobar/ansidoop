@@ -1,0 +1,38 @@
+# Ansible hosts file
+#
+# Copyright (C) 2018  JoalTech - https://www.joaltech.com
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+# Update this this file with the hosts onto which Hadoop will be installed.
+# A usual install uses 1 master, at least 1 edge and a few followers.
+# Depending on your networking setup, you can use fqdn or IP addresses.
+# WARNING: This script has been tested with IP addresses only.
+
+[leader]
+XXX.XXX.XXX.XXX
+
+[hive_server]
+XXX.XXX.XXX.XXX
+
+[followers]
+XXX.XXX.XXX.XXX
+
+[followers:vars]
+yarn_mem_mb=XXXX
+yarn_vcpus=XX
+
+[edges]
+XXX.XXX.XXX.XXX

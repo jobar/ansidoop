@@ -1,0 +1,54 @@
+# hdfs-namenode/tasks/main.yml
+---
+
+- name: Install Hadoop packages (HDFS NameNode)
+  tags:
+    - hadoop
+    - hdfs
+    - namenode
+  apt:
+    name: ["hadoop-hdfs", "hadoop-hdfs-namenode", "hadoop-hdfs-secondarynamenode"]
+    state: present
+
+- name: Format HDFS
+  tags:
+    - hadoop
+    - hdfs
+    - namenode
+  command:
+    hdfs namenode -format
+    creates="/var/lib/hadoop-hdfs/cache/hdfs/dfs/name/current/VERSION"
+  become: yes
+  become_user: hdfs
+
+- name: Start HDFS services (NameNode)
+  tags:
+    - hadoop
+    - hdfs
+    - namenode
+  service:
+    name="{{ item }}"
+    state=started
+    enabled=yes
+  with_items:
+    - hadoop-hdfs-namenode
+    - hadoop-hdfs-secondarynamenode
+
+- name: Make entire HDFS world-writable
+  tags:
+    - hadoop
+  command:
+    hdfs dfs -chmod 0777 /
+  become: yes
+  become_user: hdfs
+
+- name: Create HDFS mapreduce yarn AM staging folder
+  become: yes
+  become_user: "hdfs"
+  shell: "hdfs dfs -mkdir -p /tmp/hadoop-yarn/staging"
+
+- name: Update HDFS mapreduce yarn AM staging folder permissions
+  become: yes
+  become_user: "hdfs"
+  shell: "hdfs dfs -chmod 777 /tmp/hadoop-yarn/staging"
+

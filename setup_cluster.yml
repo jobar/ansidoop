@@ -1,0 +1,121 @@
+# Ansidoop - Ansible playbook main entry point
+# Should be run as follow: ansible-playbook -i hosts setup_cluster.yml
+#
+# Copyright (C) 2018  JoalTech - https://www.joaltech.com
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# setup_cluster.yml
+---
+- name: Add python-netaddr to local repos
+  hosts: 127.0.0.1
+  connection: local
+  become: yes
+  become_user: root
+  tags:
+    - common
+  gather_facts: no
+  tasks:
+    - name: install python-netaddr
+      raw: test -e /usr/bin/python || (apt -y update && apt install -y python-netaddr)
+
+
+- name: Setup python on all nodes
+  hosts: all
+  become: yes
+  become_user: root
+  tags:
+    - common
+  gather_facts: no
+  tasks:
+    - name: install python2
+      raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+
+- name: Setup other software before cluster install
+  hosts: all
+  become: yes
+  become_user: root
+  tags:
+    - common
+  roles:
+    - common
+
+#############################
+# First install Hadoop
+#############################
+- name: Install Hadoop master node
+  hosts: leader
+  become: yes
+  become_user: root
+  tags:
+    - hadoop
+    - master
+  roles:
+    - hdfs-namenode
+    - yarn-resourcemanager
+
+- name: Install Hadoop worker nodes
+  hosts: followers
+  become: yes
+  become_user: root
+  tags:
+    - hadoop
+    - worker
+  roles:
+    - hdfs-datanode
+    - yarn-nodemanager
+
+#############################
+# Then install Hive and Spark
+#############################
+- name: Install Hive and Spark on master node
+  hosts: leader
+  become: yes
+  become_user: root
+  tags:
+    - hadoop
+    - master
+  roles:
+    - role: hive-server
+      HIVE_METASTORE_HOST: "{{ hostvars[groups.leader[0]].ansible_fqdn }}"
+      HIVE_CLIENTS: "{{ groups.all }}"
+    - spark-master-yarn
+
+
+- name: Install Hadoop worker nodes
+  hosts: followers
+  become: yes
+  become_user: root
+  tags:
+    - hadoop
+    - worker
+  roles:
+    - role: hive
+      HIVE_METASTORE_HOST: "{{ hostvars[groups.leader[0]].ansible_fqdn }}"
+    - spark-worker-yarn
+
+#############################
+# Finally configure edge
+#############################
+- name: Install Hadoop-conf on edges
+  hosts: edges
+  become: yes
+  become_user: root
+  tags:
+    - hadoop
+    - edge
+  roles:
+    - hadoop-common
+    - hive
+    - spark-common

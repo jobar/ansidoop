@@ -1,0 +1,9 @@
+# THIS FILE IS CONTROLLED BY ANSIBLE
+#
+
+#
+# The VM(s) below will run HDFS NameNode and YARN ResourceManager services.
+#
+{% for fqdn in groups.leader %}
+{{fqdn}}
+{% endfor %}

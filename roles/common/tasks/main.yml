@@ -1,0 +1,38 @@
+# common/tasks/main.yml
+---
+
+- name: Global update and upgrade
+  tags:
+    - common
+  apt:
+    update_cache: true
+    upgrade: true
+
+- name: Instal java
+  tags:
+    - common
+  apt:
+    name: ["openjdk-8-jdk"]
+    state: present
+
+- name: Add IP address of all hosts to all hosts (IPs)
+  tags:
+    - common
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '.*{{ hostvars[item].ansible_fqdn }}$'
+    line: "{{ item }} {{ hostvars[item].ansible_fqdn }}"
+    state: present
+  when: item | ipv4
+  with_items: "{{ groups.all }}"
+
+- name: Add IP address of all hosts to all hosts (Hosts)
+  tags:
+    - common
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '.*{{ item }}$'
+    line: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }} {{ item }}"
+    state: present
+  when: not (item | ipv4)
+  with_items: "{{ groups.all }}"

@@ -1,0 +1,163 @@
+<?xml version="1.0"?>
+<!--
+  THIS FILE IS CONTROLLED BY ANSIBLE
+-->
+
+<configuration>
+
+  <!--
+      If this is not set, YARN applications fail with a
+      `NoClassDefFoundError`, see:
+      http://stackoverflow.com/questions/23458385/noclassdeffounderror-for-simple-yarn-application
+  -->
+  <property>
+    <name>yarn.application.classpath</name>
+    <value>
+      /etc/hadoop/conf,
+      /usr/lib/hadoop/*,
+      /usr/lib/hadoop/lib,
+      /usr/lib/hadoop/lib/*,
+      /usr/lib/hadoop-hdfs,
+      /usr/lib/hadoop-hdfs/*,
+      /usr/lib/hadoop-hdfs/lib/*,
+      /usr/lib/hadoop-yarn/*,
+      /usr/lib/hadoop-yarn/lib/*,
+      /usr/lib/hadoop-mapreduce/*,
+      /usr/lib/hadoop-mapreduce/lib/*
+    </value>
+  </property>
+
+
+  <!-- Site specific YARN configuration properties -->
+  <property>
+    <name>yarn.resourcemanager.hostname</name>
+    <value>{{ hostvars[groups.leader[0]].ansible_fqdn }}</value>
+    <description>The hostname of the ResourceManager.</description>
+  </property>
+
+  <property>
+    <name>yarn.resourcemanager.scheduler.class</name>
+    <!-- <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler</value> -->
+    <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler</value>
+    <description>
+      ResourceManager Scheduler class:
+      * CapacityScheduler (recommended),
+      * FairScheduler (also recommended), or
+      * FifoScheduler
+    </description>
+  </property>
+
+    <property>
+    <name>yarn.scheduler.fair.allocation.file</name>
+    <value>{{ HADOOP_CONF_DIR }}/fair-scheduler.xml</value>
+    <description>
+      Path to allocation file. An allocation file is an XML manifest describing queues
+      and their properties, in addition to certain policy defaults. This file must be
+      in XML format as described in the next section.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.fair.user-as-default-queue</name>
+    <value>false</value>
+    <description>
+      Whether to use the username associated with the allocation as the default queue
+      name, in the event that a queue name is not specified. If this is set to "false"
+      or unset, all jobs have a shared default queue, called "default". Defaults to true.
+    </description>
+  </property>
+
+
+  <property>
+    <name>yarn.scheduler.minimum-allocation-mb</name>
+    <value>128</value>
+    <description>
+      RM can only allocate memory to containers in increments of
+      "yarn.scheduler.minimum-allocation-mb".
+
+      Since one primary use case of ElastiCluster is for allocating small
+      clusters for testing, keep this low.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.maximum-allocation-mb</name>
+    <value>{{ yarn_container_max_mem_mb }}</value>
+    <description>
+      Maximum limit of memory to allocate to each container request
+      at the Resource Manager. In MBs.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.minimum-allocation-vcores</name>
+    <value>1</value>
+    <description>
+      Minimum number of cores to allocate to each container request
+      at the Resource Manager.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.scheduler.maximum-allocation-vcores</name>
+    <value>{{ yarn_container_max_vcpus }}</value>
+    <description>
+      Maximum number of cores to allocate to each container request
+      at the Resource Manager.
+    </description>
+  </property>
+
+  <!-- log aggregation is necessary for correct Spark/YARN integration -->
+  <property>
+    <name>yarn.log-aggregation-enable</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <name>yarn.log-aggregation.retain-seconds</name>
+    <value>{{ yarn_logs_retention_sec }}</value><!-- ~10 days -->
+    <description>
+      How long to keep aggregation logs before deleting them. -1 disables.
+      Be careful, set this too small and you will spam the name node.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.log-aggregation.retain-check-interval-seconds</name>
+    <value>0</value>
+    <description>
+      Time between checks for aggregated log retention.
+
+      If set to 0 or a negative value then the value is computed as
+      one-tenth of the aggregated log retention time.  Be careful, set
+      this too small and you will spam the name node.
+    </description>
+  </property>
+
+{% if inventory_hostname in groups['followers'] %}
+  <property>
+    <name>yarn.nodemanager.resource.memory-mb</name>
+    <!-- keep 500MB of total memory for OS + JVM overhead -->
+    <value>{{ hostvars[inventory_hostname].yarn_mem_mb }}</value>
+  </property>
+
+  <!-- the `yarn.nodemanager.resource.*` properties override detected values for a *single* NodeManager -->
+  <property>
+    <name>yarn.nodemanager.resource.cpu-vcores</name>
+    <value>{{ hostvars[inventory_hostname].yarn_vcpus }}</value>
+  </property>
+
+  <!-- Auxiliary services to be run by Yarn NodeManagers -->
+  <property>
+    <name>yarn.nodemanager.aux-services</name>
+    <value>mapreduce_shuffle</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+    <value>org.apache.hadoop.mapred.ShuffleHandler</value>
+  </property>
+
+{% endif %}
+
+</configuration>

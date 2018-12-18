@@ -1,0 +1,81 @@
+# hadoop-common/tasks/main.yml
+---
+
+- name: Install Java JRE
+  tags:
+    - hadoop
+  apt:
+    name: default-jre-headless
+    state: present
+
+- name: Install Hadoop packages (common)
+  tags:
+    - hadoop
+  apt:
+    name: ["hadoop", "hadoop-client", "hadoop-doc", "hadoop-hdfs-fuse"]
+    state: present
+
+
+- name: Ensure Hadoop configuration directory exists
+  tags:
+    - hadoop
+  file:
+    path="{{ HADOOP_CONF_DIR }}"
+    state=directory
+
+- name: Copy Hadoop/BigTop default configuration files
+  tags:
+    - hadoop
+  command:
+    "rsync -ax --update --backup /etc/hadoop/conf.empty/ {{ HADOOP_CONF_DIR }}/"
+
+
+- name: Deploy Hadoop/{{ cluster_name }} configuration files
+  tags:
+    - hadoop
+  template:
+    src="{{ item }}.j2"
+    dest="{{ HADOOP_CONF_DIR }}/{{ item }}"
+  with_items:
+    #- capacity-scheduler.xml
+    - fair-scheduler.xml
+    - core-site.xml
+    - hdfs-site.xml
+    - mapred-site.xml
+    - master
+    - slaves
+    - yarn-site.xml
+
+
+- name: Activate Hadoop/{{ cluster_name }} configuration
+  alternatives:
+    name="hadoop-conf"
+    link="/etc/hadoop/conf"
+    path="{{ HADOOP_CONF_DIR }}"
+
+- name: Correctly create log folders for HDFS
+  tags:
+    - hadoop
+  file:
+    dest=/var/log/hadoop-hdfs
+    state=directory
+    owner=hdfs
+    group=hadoop
+
+- name: Correctly create log folders for YARN
+  tags:
+    - hadoop
+  file:
+    dest=/var/log/hadoop-yarn
+    state=directory
+    owner=yarn
+    group=hadoop
+
+- name: Correctly create log folders for MapReduce
+  tags:
+    - hadoop
+  file:
+    dest=/var/log/hadoop-mapreduce
+    state=directory
+    owner=mapred
+    group=hadoop

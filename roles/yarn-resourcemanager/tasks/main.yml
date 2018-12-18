@@ -1,0 +1,24 @@
+# yarn-resourcemanager/tasks/main.yml
+---
+
+- name: Install Hadoop packages (YARN ResourceManager)
+  tags:
+    - hadoop
+    - yarn
+    - resourcemanager
+  apt:
+    name: ["hadoop-mapreduce", "hadoop-mapreduce-historyserver", "hadoop-yarn", "hadoop-yarn-proxyserver", hadoop-yarn-resourcemanager]
+    state: present
+
+- name: Restart YARN ResourceManager services
+  tags:
+    - hadoop
+    - yarn
+    - resourcemanager
+  service:
+    name="{{ item }}"
+    state=restarted
+    enabled=yes
+  with_items:
+    - hadoop-yarn-resourcemanager
+    - hadoop-mapreduce-historyserver

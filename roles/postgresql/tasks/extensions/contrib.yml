@@ -1,0 +1,12 @@
+# file: postgresql/tasks/extensions/contrib.yml
+
+- name: PostgreSQL | Extensions | Make sure the postgres contrib extensions are installed | Debian
+  apt:
+    name: "postgresql-contrib-{{postgresql_version}}"
+    state: present
+    update_cache: yes
+    cache_valid_time: "{{apt_cache_valid_time | default (3600)}}"
+    allow_unauthenticated: '{{ not insecure_https_downloads|default("no")|bool }}'
+  when: ansible_os_family == "Debian"
+  notify:
+    - restart postgresql

@@ -1,0 +1,46 @@
+# hive-server/tasks/main.yml
+---
+#
+# Installation and configuration mostly follows these instructions:
+# http://www.cloudera.com/documentation/archive/cdh/4-x/4-2-0/CDH4-Installation-Guide/cdh4ig_topic_18_4.html
+#
+
+- name: Load Hive schema if not already loaded
+  tags:
+    - hadoop
+    - hive
+    - hive-server
+  shell:
+    "psql --username={{ HIVE_METASTORE_DB_USER }} --dbname={{ HIVE_METASTORE_DB_NAME }} -c \"\\d DBS\" || psql --username=\"{{ HIVE_METASTORE_DB_USER }}\" --dbname=\"{{ HIVE_METASTORE_DB_NAME }}\" < /usr/lib/hive/scripts/metastore/upgrade/postgres/hive-schema-{{ HIVE_SCHEMA_VERSION }}.postgres.sql"
+
+- name: Create warehouse folder on HDFS
+  become: yes
+  become_user: "hdfs"
+  shell: hdfs dfs -mkdir -p {{ HIVE_HDFS_WAREHOUSE }}
+
+- name: Change perms of warehouse folder
+  become: yes
+  become_user: "hdfs"
+  shell: hdfs dfs -chown -R hive:hive {{ HIVE_HDFS_WAREHOUSE }}
+
+- name: Install Hive packages (services)
+  tags:
+    - hadoop
+    - hive
+    - hive-server
+  apt:
+    name: ["hive-metastore", "hive-server2"]
+    state: present
+
+- name: Enable and restart Hive services
+  tags:
+    - hadoop
+    - hive
+    - hive-server
+  service:
+    name="{{ item }}"
+    state=restarted
+    enabled=yes
+  with_items:
+    - hive-metastore
+    - hive-server2

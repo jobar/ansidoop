@@ -1,0 +1,124 @@
+# Ansidoop - Ansible variables setup
+# Should be run as follow: ansible-playbook -i hosts setup_cluster.yml
+#
+# Copyright (C) 2018  JoalTech - https://www.joaltech.com
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+#
+# Mandatory updates:
+# - ansible_ssh_private_key_file
+# - yarn_container_max_mem_mb
+# - yarn_container_max_vcpus
+#
+
+
+###############################
+#### SSH private-key file
+###############################
+ansible_ssh_private_key_file: /PATH/TO/THE/PEM/FILE
+
+###############################
+#### Global
+###############################
+
+# Cluster-name
+cluster_name: "ansidoop"
+
+# BigTop vars
+BIGTOP_RELEASE: "1.3.0"
+BIGTOP_MIRROR: "http://mirrors.ibiblio.org/apache"
+
+# Hadoop vars
+HADOOP_CONF_DIR: "/etc/hadoop/conf.{{ cluster_name }}"
+HADOOP_HOME_DIR: "/usr/lib/hadoop"
+HDFS_HOME_DIR: "/usr/lib/hadoop-hdfs"
+YARN_HOME_DIR: "/usr/lib/hadoop-yarn"
+MAPRED_HOME_DIR: "/usr/lib/hadoop-mapreduce"
+
+# Hive vars
+HIVE_CONF_DIR: "/etc/hive/conf.{{ cluster_name }}"
+HIVE_METASTORE_HOST: "{{ hostvars[groups.hive_server[0]].ansible_fqdn }}"
+HIVE_METASTORE_DB_HOST: "{{ HIVE_METASTORE_HOST }}"
+HIVE_METASTORE_DB_NAME: "metastore"
+HIVE_METASTORE_DB_PASSWORD: "AQZkXxgG3HXrWJ3s"
+HIVE_METASTORE_DB_USER: "hive"
+HIVE_HDFS_WAREHOUSE: "/user/hive/warehouse"
+HIVE_SCHEMA_VERSION: "2.3.0"
+
+# Spark vars
+SPARK_CONF_DIR: "/etc/spark/conf.{{cluster_name}}"
+SPARK_HOME_DIR: "/usr/lib/spark"
+SPARK_VERSION: "2.2.1"
+SPARK_LIBS_JAR: "spark-libs-{{ SPARK_VERSION }}.jar"
+HDFS_SPARK_FOLDER: "/user/spark"
+SPARK_SUFFLE_JAR: "spark-{{ SPARK_VERSION }}-yarn-shuffle.jar"
+
+# Ananconda vars
+anaconda_mirror : "http://repo.continuum.io/archive"
+anaconda_version : "5.3.1"
+anaconda_python_version : "3"
+anaconda_cleanup : False
+anaconda_in_path: True
+
+###############################
+#### HDFS
+###############################
+
+# HDFS replication factor
+hdfs_replication_factor: 3
+
+###############################
+#### YARN
+###############################
+
+# scheduler max-AM-resource in percent
+max_am_resource_percent: 0.2
+
+# Log retention in yarn (1 day)
+yarn_logs_retention_sec: 86400
+
+# Max container resource for yarn
+yarn_container_max_mem_mb: XXXXX
+yarn_container_max_vcpus: XX
+
+# NodeManager resources are defined in
+# inventory file, as they should be
+# maintained by host
+
+
+###############################
+#### MapReduce
+###############################
+
+# AM resource
+mr_am_vcpus: 1
+mr_am_mem_mb: 2000
+mr_am_mem_mb_opts: 1600
+
+# Map resource
+mr_map_mem_mb: 2000
+mr_map_mem_mb_opts: 1600
+
+# Reduce resource
+mr_red_mem_mb: 4000
+mr_red_mem_mb_opts: 3200
+
+###############################
+#### Spark
+###############################
+spark_driver_memory_mb: 2000
+spark_executor_memory_mb: 2000
+spark_python_worker_memory_mb: 1500
+spark_driver_maxresultsize_mb: 1500

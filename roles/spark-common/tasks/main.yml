@@ -1,0 +1,130 @@
+# spark-common/tasks/main.yml
+---
+
+- name: Install Spark packages (common)
+  tags:
+    - hadoop
+    - spark
+    - common
+  apt:
+    # Removed "spark-thriftserver" to prevent auto-start
+    name: ["spark-core", "spark-datanucleus", "spark-extras", "spark-python", "spark-yarn-shuffle"]
+    state: present
+
+- name: Check if Py4J version-independent `.zip` archive exist
+  stat:
+    path="/usr/lib/spark/python/lib/py4j-src.zip"
+    follow=no
+  register: p
+  tags:
+    - hadoop
+    - spark
+
+- name: Symlink Py4J `.zip` archive under a version-independent name
+  # XXX: We use shell globbing to find out what source file to link,
+  # assuming there is one and only one Py4J `.zip` file.
+  shell: |
+    cd /usr/lib/spark/python/lib
+    ln -s py4j-*-src.zip py4j-src.zip
+  when: not p.stat.exists
+  tags:
+    - hadoop
+    - spark
+
+
+- name: Ensure Spark configuration directory exists
+  tags:
+    - hadoop
+    - spark
+  file:
+    path="{{ SPARK_CONF_DIR }}"
+    state=directory
+
+
+- name: Copy Spark/BigTop default configuration files
+  tags:
+    - hadoop
+    - spark
+  command:
+    "rsync -ax --update --backup /etc/spark/conf.dist/ {{ SPARK_CONF_DIR }}/"
+
+
+- name: Read installed JVM version
+  shell: |
+    expr match "$(java -version 2>&1)" '.\+ version "1\.\([0-9]\+\)\.[0-9]\+'
+  register: _spark_common_jvm_version
+
+
+- name: Store JVM version into variable `java_version`
+  set_fact:
+    java_version: "{{ _spark_common_jvm_version.stdout|int }}"
+
+
+- name: Deploy Spark/{{cluster_name}} configuration files
+  tags:
+    - hadoop
+    - spark
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ SPARK_CONF_DIR }}/{{ item }}"
+  with_items:
+    - spark-defaults.conf
+    #- spark-env.sh
+
+
+- name: Activate Spark/{{cluster_name}} configuration
+  alternatives:
+    name: "spark-conf"
+    link: "/etc/spark/conf"
+    path: "{{ SPARK_CONF_DIR }}"
+
+
+- name: Deploy PySpark configuration files
+  tags:
+    - hadoop
+    - spark
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  with_items:
+    - { src: "pyspark.sh.j2", dest: "/etc/profile.d/pyspark.sh" }
+
+- name: Create /user/spark folder on HDFS
+  become: yes
+  become_user: "hdfs"
+  shell: "hdfs dfs -mkdir -p {{ HDFS_SPARK_FOLDER }}/archives"
+
+- name: Update perms of /user/spark folder on HDFS
+  become: yes
+  become_user: "hdfs"
+  shell: "hdfs dfs -chown -R spark:spark {{ HDFS_SPARK_FOLDER }}"
+
+
+# Check if archive file is already present in HDFS
+- name: Check if spark-archive is already in HDFS
+  become: yes
+  become_user: "spark"
+  shell: "hdfs dfs -ls {{ HDFS_SPARK_FOLDER }}/archives | grep '/{{ SPARK_LIBS_JAR }}' | wc -l"
+  register: spark_archive_lines
+
+# Only add it if not present
+- name: Create temporary folder for archive
+  become: yes
+  become_user: "spark"
+  tempfile:
+    state: directory
+  register: tmp_archive_folder
+  when: spark_archive_lines.stdout == "0"
+
+- name: Create spark-archive in tmp_archive_folder
+  become: yes
+  become_user: "spark"
+  shell: "jar cv0f {{ tmp_archive_folder.path }}/{{ SPARK_LIBS_JAR }} -C {{ SPARK_HOME_DIR }}/jars ."
+  when: spark_archive_lines.stdout == "0"
+  register: local_archive_created
+
+- name: Copy spark-archive to HDFS
+  become: yes
+  become_user: "spark"
+  shell: "hdfs dfs -put -f {{ tmp_archive_folder.path }}/{{ SPARK_LIBS_JAR }} {{ HDFS_SPARK_FOLDER }}/archives"
+  when: spark_archive_lines.stdout == "0"
